@@ -12,13 +12,33 @@ import java.util.*;
 @RestController
 public class Controller {
     //// final !!!!!!!!!!!!!!!
-    private List<Item>  items = new ArrayList<>();
+    private List<String>  items = new ArrayList<>();
+    private List<String>  users = new ArrayList<>();
+    private List<Integer> id_user = new ArrayList<>();
+    private List<Integer> id_item = new ArrayList<>();
+    private List<String> comments = new ArrayList<>();
+    //private List<ArrayList<Integer>> commentstoitem = new ArrayList<>();
+
 
     // curl -i -X POST http://localhost:8080/items/add -H "Content-Type: application/json" -d "health"
     @PostMapping("/items/add")
     public ResponseEntity<Void> additem(@RequestBody String text) {
-        Item item = new Item(text);
-        items.add(item);
+        items.add(text);
+        //commentstoitem.add(new ArrayList<>());
+        return ResponseEntity.accepted().build();
+    }
+
+    //curl -i -X POST http://localhost:8080/users/add -H "Content-Type: application/json" -d "Lisa"
+    @PostMapping("/users/add")
+    public ResponseEntity<Void> useritem(@RequestBody String text) {
+        users.add(text);
+        return ResponseEntity.accepted().build();
+    }
+
+    //curl -i -X POST http://localhost:8080/users/delete/2
+    @DeleteMapping("/users/delete/{iduser}")
+    public ResponseEntity<Void> userdelete(@PathVariable ("iduser") Integer iduser) {
+        users.remove((int)iduser);
         return ResponseEntity.accepted().build();
     }
 
@@ -41,7 +61,7 @@ public class Controller {
     }
     */
 
-
+    // curl -X GET http://localhost:8080/items -i
     @GetMapping("/items")
     public ResponseEntity<String> getItems() throws JsonProcessingException {
         String value = "[\n";
@@ -49,10 +69,10 @@ public class Controller {
         for (int i=0;i<items.size();i++)
         {
             if (i==items.size()-1){
-                value =value+items.get(i).getname() + "\n";
+                value =value+items.get(i) + "\n";
                 continue;
             }
-            value = value + items.get(i).getname() + ",\n";
+            value = value + items.get(i) + ",\n";
         }
         value+="]";
         return ResponseEntity.ok(value);
@@ -62,15 +82,25 @@ public class Controller {
     // curl -X DELETE http://localhost:8080/items/0 -i
     @DeleteMapping("items/{index}")
     public ResponseEntity<Void> deleteitem(@PathVariable("index") Integer index) {
-        items.remove((int) index);
+        Integer i=0;
+        while (i<comments.size()){
+            if (id_item.get(i)==index){
+                id_item.remove((int)i);
+                id_user.remove((int)i);
+                comments.remove((int)i);
+                continue;
+            }
+            i++;
+        }
+        items.remove((int)index);
         return ResponseEntity.noContent().build();
     }
 
-    // curl -i -X PUT http://localhost:8080/items/update/0 -H "Content-Type: application/json" -H "Accept: */*" -d "{\"item_name\":\"Hw\"}"
+    // curl -i -X PUT http://localhost:8080/items/update/0 -H "Content-Type: application/json" -H "Accept: */*" -d "food"
     @PutMapping("/items/update/{index}")
     public ResponseEntity<Void> updateitem(@PathVariable("index") Integer index, @RequestBody String text) throws JsonProcessingException{
 
-        items.get(index).Updatename(text);
+        items.set((int)index, text);
         return ResponseEntity.accepted().build();
     }
 
@@ -84,6 +114,9 @@ public class Controller {
     @DeleteMapping("items/all")
     public ResponseEntity<Void> deleteAllItems() {
         items=new ArrayList<>();
+        comments=new ArrayList<>();
+        id_user=new ArrayList<>();
+        id_item=new ArrayList<>();
         return ResponseEntity.noContent().build();
     }
 
@@ -91,92 +124,75 @@ public class Controller {
     @GetMapping("/items/show/{index}")
     public ResponseEntity<String> getItemByIndex(@PathVariable("index") Integer index) throws JsonProcessingException {
         String  value;
-        value = items.get(index).convert_to_json();
+        value = items.get((int)index) + ":\n";
+        for (int i=0; i<comments.size(); ++i){
+            if (id_item.get(i)==index){
+                value+=users.get(id_user.get(i))+ " :";
+                value+=comments.get(i)+ " \n";
+            }
+
+        }
         return ResponseEntity.ok(value);
     }
 
-    // curl -i -X POST http://localhost:8080/items/addcomment/0 -H "Content-Type: application/json" -d "what is it"
-    @PostMapping("/items/addcomment/{index}")
-    public ResponseEntity<Void> addcomment(@PathVariable("index") Integer index, @RequestBody String text) {
 
-        items.get(index).Addcomment(text);
+
+    // curl -i -X POST http://localhost:8080/items/0/0/addcomment -H "Content-Type: application/json" -d "what is food"
+    @PostMapping("/items/{userid}/{itemid}/addcomment")
+    public ResponseEntity<Void> addcomment(@PathVariable("itemid") Integer itemid, @PathVariable("userid") Integer userid, @RequestBody String text) {
+        comments.add(text);
+        id_item.add((int)itemid);
+        id_user.add((int)userid);
         return ResponseEntity.accepted().build();
     }
 
-    // curl -i -X PUT http://localhost:8080/items/0/updetecomment/1 -H "Content-Type: application/json" -d "what is it"
-    @PutMapping("/items/{index1}/updetecomment/{index2}")
-    public ResponseEntity<Void> updatecomment(@PathVariable("index1") Integer index1, @PathVariable("index2") Integer index2, @RequestBody String text) {
+    // curl -i -X PUT http://localhost:8080/items/updatecomment/1 -H "Content-Type: application/json" -d "okey we know"
+    @PutMapping("/items/updatecomment/{indexcom}")
+    public ResponseEntity<Void> updatecomment(@PathVariable("indexcom") Integer indexcom, @RequestBody String text) {
 
-        items.get(index1).Updatecomment(index2, text);
+        comments.set((int)indexcom, text);
         return ResponseEntity.accepted().build();
     }
 
-    // curl -i -X DELETE http://localhost:8080/items/0/deletecomment/2
-    @DeleteMapping("/items/{index1}/deletecomment/{index2}")
-    public ResponseEntity<Void> deletecomment(@PathVariable("index1") Integer index1, @PathVariable("index2") Integer index2) {
+    // curl -i -X DELETE http://localhost:8080/items/deletecomment/2
+    @DeleteMapping("/items/deletecomment/{index1}")
+    public ResponseEntity<Void> deletecomment(@PathVariable("index1") Integer index1) {
 
-        items.get(index1).Deletecomment(index2);
+        comments.remove((int)index1);
+        id_user.remove((int)index1);
+        id_item.remove((int)index1);
+
         return ResponseEntity.accepted().build();
     }
 
-
-    /*
-
-    // curl -X GET http://localhost:8080/contacts -i
-    @GetMapping("/contacts")
-    public ResponseEntity<String> getcontacts() throws JsonProcessingException {
-        String value = "[\n";
-
-        for (int i=0;i<contacts.size();i++)
-        {
-            if (i==contacts.size()-1){
-                value =value+contacts.get(i).convert_to_json() + "\n";
+    //curl -X DELETE http://localhost:8080/user/0/deletecomments -i
+    @DeleteMapping("/user/{index}/deletecomments")
+    public ResponseEntity<Void> userdeleteallcomments (@PathVariable("index") Integer index) {
+        Integer i=0;
+        while (i<comments.size()){
+            if (id_user.get(i)==index){
+                id_user.remove((int)i);
+                id_item.remove((int)i);
+                comments.remove((int)i);
                 continue;
             }
-            value = value + contacts.get(i).convert_to_json() + ",\n";
+            i++;
         }
-        value+="\n]";
-        return ResponseEntity.ok(value);
+        return ResponseEntity.accepted().build();
     }
 
-    // curl -X GET http://localhost:8080/contacts/show/1 -i
-    @GetMapping("/contacts/show/{index}")
-    public ResponseEntity<String> getContactByIndex(@PathVariable("index") Integer index) throws JsonProcessingException {
+
+    // curl -X GET http://localhost:8080/user/1/showcomments -i
+    @GetMapping("/user/{index}/showcomments")
+    public ResponseEntity<String> showusercomments(@PathVariable("index") Integer index) throws JsonProcessingException {
         String  value;
-        value = contacts.get(index).convert_to_json();
+        value = users.get((int)index)+" :\n";
+        for (int i=0; i<comments.size(); ++i){
+            if (id_user.get(i)==index){
+                value+=items.get(id_item.get(i))+ ": " +comments.get(i)+ "\n";
+            }
+        }
         return ResponseEntity.ok(value);
     }
 
-    // curl -i -X DELETE http://localhost:8080/contacts/delete/1
-    @DeleteMapping("/contacts/delete/{index}")
-    public ResponseEntity<Void> deleteUser(@PathVariable("index") Integer index) {
-        contacts.remove((int) index);
-        return ResponseEntity.noContent().build();
-    }
-    */
-
-
-    // curl -i -X POST http://localhost:8080/contacts/add -H "Content-Type: application/json" -H "Accept: */*" -d "{\"contact_name\":\"Masha\",\"contact_number\":\"88004872574\", \"contact_email\":\"kdvk.gmail.com\"}"
-    /*
-    @PostMapping("/contacts/add")
-    public ResponseEntity<Void> addContact(@RequestBody String json_user) throws JsonProcessingException
-    {
-        Contact contact = new Contact();
-
-        contact.convert_from_json(json_user);
-        contacts.add(contact);
-
-        return ResponseEntity.accepted().build();
-    }
-    */
-    // curl -i -X PUT http://localhost:8080/contacts/update/0 -H "Content-Type: application/json" -H "Accept: */*" -d "{\"contact_name\":\"Vlad\",\"contact_number\":\"2345678904\", \"contact_email\":\"fsgrhsjut.yandex.com\"}"
-    /*
-    @PutMapping("/contacts/update/{index}")
-    public ResponseEntity<Void> updateContact(@PathVariable("index") Integer index, @RequestBody String json_user) throws JsonProcessingException{
-        Contact contact = new Contact();
-        contact.convert_from_json(json_user);
-        contacts.set(index, contact);
-        return ResponseEntity.accepted().build();
-    }
-    */
 }
